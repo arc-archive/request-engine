@@ -1,7 +1,7 @@
 {
   "name": "@advanced-rest-client/request-engine",
   "description": "The engine behind Advanced REST Client's HTTP requests processing.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "Apache-2.0",
   "main": "index.js",
   "module": "index.js",

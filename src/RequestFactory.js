@@ -2,6 +2,7 @@
 import { ActionsRunner } from '@advanced-rest-client/arc-actions';
 import { ArcModelEvents } from '@advanced-rest-client/arc-models';
 import * as Events from '@advanced-rest-client/arc-events';
+import { VariablesProcessor } from '@advanced-rest-client/arc-environment';
 import { ModulesRegistry } from './ModulesRegistry.js';
 import ExecutionResponse from './ExecutionResponse.js';
 
@@ -67,8 +68,12 @@ export class RequestFactory {
     const abortController = new AbortController();
     const { signal } = abortController;
     await this.actions.processRequestActions(request);
-    const modules = ModulesRegistry.get(ModulesRegistry.request);
     const environment = await ArcModelEvents.Environment.current(this.eventsTarget);
+    const processor = new VariablesProcessor(this.jexl, environment.variables);
+    // @ts-ignore
+    await processor.evaluateVariables(request.request, ['url', 'headers', 'method', 'payload']);
+
+    const modules = ModulesRegistry.get(ModulesRegistry.request);
     for (const [id, main] of modules) {
       if (signal.aborted) {
         this.abortControllers.delete(request.id);
