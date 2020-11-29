@@ -78,15 +78,17 @@ export class ArcFetchRunner {
     const redirect = config.followRedirects === false ? 'error' : 'follow';
     const credentials = config.ignoreSessionCookies === false ? 'omit' : 'include';
     const { signal } = abortController;
-    const request = new Request(url, {
+    const init = /** @type RequestInit */ ({
       method,
       headers: this.prepareHeaders(headers),
-      body: payload,
       redirect,
       credentials,
       signal,
     });
-    return request;
+    if (payload && !['get', 'head'].includes(method.toLowerCase())) {
+      init.body = payload;
+    }
+    return new Request(url, init);
   }
 
   /**
