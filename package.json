@@ -21,9 +21,10 @@
   },
   "dependencies": {
     "@advanced-rest-client/arc-actions": "^0.1.2",
+    "@advanced-rest-client/arc-cookies": "^0.1.0",
     "@advanced-rest-client/arc-environment": "^0.1.0",
     "@advanced-rest-client/arc-events": "^0.2.10",
-    "@advanced-rest-client/arc-headers": "^0.1.4",
+    "@advanced-rest-client/arc-headers": "^0.1.5",
     "@advanced-rest-client/arc-models": "^4.2.6",
     "@advanced-rest-client/arc-types": "^0.2.35",
     "@advanced-rest-client/authorization-method": "^0.2.2"

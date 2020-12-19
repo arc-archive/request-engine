@@ -131,10 +131,12 @@ In ARC register its own default modules:
 
 
 ```javascript
-import { RequestFactory, ModulesRegistry, RequestAuthorization, ResponseAuthorization } from '@advanced-rest-client/request-engine';
+import { RequestFactory, ModulesRegistry, RequestAuthorization, ResponseAuthorization, RequestCookies } from '@advanced-rest-client/request-engine';
 
 ModulesRegistry.register(ModulesRegistry.request, '@advanced-rest-client/request-engine/request/request-authorization', RequestAuthorization, ['storage']);
 ModulesRegistry.register(ModulesRegistry.response, '@advanced-rest-client/request-engine/response/request-authorization', ResponseAuthorization, ['storage', 'events']);
+ModulesRegistry.register(ModulesRegistry.request, '@advanced-rest-client/request-engine/request/session-cookies', RequestCookies.processRequestCookies, ['events']);
+ModulesRegistry.register(ModulesRegistry.response, '@advanced-rest-client/request-engine/response/session-cookies', RequestCookies.processResponseCookies, ['events']);
 
 const factory = new RequestFactory({ ... });
 factory.processRequest({ ... });

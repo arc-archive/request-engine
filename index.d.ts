@@ -3,3 +3,4 @@ export { ModulesRegistry } from './src/ModulesRegistry';
 export { ArcFetchRequest } from './src/ArcFetchRequest';
 export { default as RequestAuthorization } from './src/modules/RequestAuthorization';
 export { default as ResponseAuthorization } from './src/modules/ResponseAuthorization';
+export * as RequestCookies  from './src/modules/RequestCookies';
