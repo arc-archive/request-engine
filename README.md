@@ -52,7 +52,7 @@ The `events` permissions adds a reference to ARC's events object. This object is
 
 This is the configuration of which file should be executed in which context.
 
-The `request` context executed the file in the pre-request processing. The `response` is executed after the response is reported back from the rerquest transport.
+The `request` context executed the file in the pre-request processing. The `response` is executed after the response is reported back from the request transport.
 
 #### deprecated
 
@@ -126,15 +126,15 @@ The class itself is registered in the pre-load script of Electron application an
 In ARC register its own default modules:
 
 - request
-  - `src/modules/RequestAuthorization.js` - Inserts authorization data into the request from the authorization configuration. Requires `['storage']` permission.
-  - `src/modules/ResponseAuthorization.js` - Handles the response that needs authorization. Renders a dialog for the basics or NTLM authorization methods when needed and re-runs the request. Requires `['storage', 'events]` permission.
+  - `src/modules/RequestAuthorization.js` - Inserts authorization data into the request from the authorization configuration. Requires `['store']` permission.
+  - `src/modules/ResponseAuthorization.js` - Handles the response that needs authorization. Renders a dialog for the basics or NTLM authorization methods when needed and re-runs the request. Requires `['store', 'events]` permission.
 
 
 ```javascript
 import { RequestFactory, ModulesRegistry, RequestAuthorization, ResponseAuthorization, RequestCookies } from '@advanced-rest-client/request-engine';
 
-ModulesRegistry.register(ModulesRegistry.request, '@advanced-rest-client/request-engine/request/request-authorization', RequestAuthorization, ['storage']);
-ModulesRegistry.register(ModulesRegistry.response, '@advanced-rest-client/request-engine/response/request-authorization', ResponseAuthorization, ['storage', 'events']);
+ModulesRegistry.register(ModulesRegistry.request, '@advanced-rest-client/request-engine/request/request-authorization', RequestAuthorization, ['store']);
+ModulesRegistry.register(ModulesRegistry.response, '@advanced-rest-client/request-engine/response/request-authorization', ResponseAuthorization, ['store', 'events']);
 ModulesRegistry.register(ModulesRegistry.request, '@advanced-rest-client/request-engine/request/session-cookies', RequestCookies.processRequestCookies, ['events']);
 ModulesRegistry.register(ModulesRegistry.response, '@advanced-rest-client/request-engine/response/session-cookies', RequestCookies.processResponseCookies, ['events']);
 
