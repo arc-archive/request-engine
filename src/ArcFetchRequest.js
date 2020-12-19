@@ -2,6 +2,8 @@
 import { ArcFetchRunner } from './ArcFetchRunner.js';
 
 /** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.ArcEditorRequest} ArcEditorRequest */
+/** @typedef {import('@advanced-rest-client/arc-types').ArcResponse.Response} Response */
+/** @typedef {import('@advanced-rest-client/arc-types').ArcResponse.ErrorResponse} ErrorResponse */
 /** @typedef {import('@advanced-rest-client/arc-types').Config.ARCRequestConfig} ARCRequestConfig */
 
 /**
@@ -41,6 +43,11 @@ export class ArcFetchRequest {
       return undefined;
     }
     const transport = runner.prepareTransportRequest();
+    const typedResult = /** @type Response */ (result);
+    const typedError = /** @type ErrorResponse */ (result);
+    if (!typedError.error && transport.httpMessage) {
+      typedResult.size.request = transport.httpMessage.length;
+    }
     delete this.queue[id];
     return {
       request: editorRequest,

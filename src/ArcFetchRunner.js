@@ -118,6 +118,16 @@ export class ArcFetchRunner {
     const { status, statusText, headers } = response;
     const loadingTime = this.endTime - this.startTime;
     const payload = await this.readResponsePayload(headers, response);
+
+    let responseSize = 0;
+    if (payload) {
+      if (typeof payload === 'string') {
+        responseSize = payload.length;
+      } else {
+        responseSize = payload.byteLength;
+      }
+    }
+
     const rsp = /** @type ArcResponse */ ({
       loadingTime,
       status,
@@ -126,6 +136,10 @@ export class ArcFetchRunner {
       id: this.id,
       redirects: [],
       headers: HeadersParser.toString(headers),
+      size: {
+        request: 0,
+        response: responseSize,
+      }
     });
     return rsp;
   }
