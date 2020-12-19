@@ -63,9 +63,10 @@ export class ArcFetchRunner {
     if (typeof this.config.timeout !== 'number') {
       return;
     }
+    const timeout = this.config.timeout * 1000;
     this.requestTimeout = setTimeout(() => {
       this.abort();
-    });
+    }, timeout);
   }
   
   /**
