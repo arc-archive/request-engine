@@ -61,3 +61,17 @@ export declare interface ExecutionStore {
   Environment?: ArcModelEvents.EnvironmentFunctions;
   Variable?: ArcModelEvents.VariableFunctions;
 }
+
+export declare interface RequestProcessOptions {
+  /**
+   * Whether to run jexl to evaluate variables. Default to true.
+   */
+  evaluateVariables?: boolean;
+}
+
+export declare interface ResponseProcessOptions {
+  /**
+   * Whether to run jexl to evaluate variables. Default to true.
+   */
+  evaluateVariables?: boolean;
+}
