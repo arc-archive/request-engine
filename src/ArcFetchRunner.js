@@ -42,12 +42,15 @@ export class ArcFetchRunner {
     this.startTime = Date.now();
     let response = /** @type Response */ (null);
     let error = /** @type Error */ (null);
+    this.informStatus('requestloadstart');
     this.setupTimeout();
     try {
       response = await fetch(request);
+      this.informStatus('requestloadend');
       this.endTime = Date.now();
     } catch (e) {
       this.endTime = Date.now();
+      this.informStatus('requestloadend');
       error = e;
     }
     if (this.requestTimeout) {
@@ -225,5 +228,18 @@ export class ArcFetchRunner {
       return response.arrayBuffer();
     }
     return response.text();
+  }
+
+  /**
+   * @param {string} type
+   */
+  informStatus(type) {
+    document.body.dispatchEvent(new CustomEvent(type, {
+      composed: true,
+      bubbles: true,
+      detail: {
+        id: this.id,
+      }
+    }));
   }
 }
