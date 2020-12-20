@@ -69,15 +69,15 @@ export declare class RequestFactory {
   /**
    * Builds module execution context
    */
-  buildExecutionContext(permissions: string[], environment: EnvironmentStateDetail): Promise<ExecutionContext>;
+  buildExecutionContext(permissions: string[], environment: EnvironmentStateDetail): Promise<Readonly<ExecutionContext>>;
 
   /**
    * Prepares a map of events passed to the module
    */
-  prepareExecutionEvents(): ExecutionEvents;
+  prepareExecutionEvents(): Readonly<ExecutionEvents>;
 
   /**
    * @param hasEnvironment Whether to add environment events
    */
-  prepareExecutionStore(hasEnvironment: boolean): ExecutionStore;
+  prepareExecutionStore(hasEnvironment: boolean): Readonly<ExecutionStore>;
 }

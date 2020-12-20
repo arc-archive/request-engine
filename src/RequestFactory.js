@@ -182,7 +182,7 @@ export class RequestFactory {
    * Builds module execution context
    * @param {string[]} permissions 
    * @param {EnvironmentStateDetail} environment 
-   * @returns {Promise<ExecutionContext>}
+   * @returns {Promise<readonly ExecutionContext>}
    */
   async buildExecutionContext(permissions, environment) {
     const result = /** @type ExecutionContext */ ({
@@ -198,13 +198,13 @@ export class RequestFactory {
     if (permissions.includes('store')) {
       result.Store = this.prepareExecutionStore(hasEnvironment);
     }
-    return result;
+    return Object.freeze(result);
   }
 
   /**
    * Prepares a map of events passed to the module
    * 
-   * @returns {ExecutionEvents}
+   * @returns {readonly ExecutionEvents}
    */
   prepareExecutionEvents() {
     const result = /** @type ExecutionEvents */ ({
@@ -223,7 +223,7 @@ export class RequestFactory {
 
   /**
    * @param {boolean} hasEnvironment Whether to add environment events
-   * @returns {ExecutionStore}
+   * @returns {readonly ExecutionStore}
    */
   prepareExecutionStore(hasEnvironment) {
     const result = /** @type ExecutionStore */ ({
