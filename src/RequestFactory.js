@@ -72,13 +72,20 @@ export class RequestFactory {
     const { signal } = abortController;
     await this.actions.processRequestActions(request, {
       evaluateVariables: options.evaluateVariables,
+      evaluateSystemVariables: options.evaluateSystemVariables,
     });
 
     const environment = await ArcModelEvents.Environment.current(this.eventsTarget);
     if (options.evaluateVariables !== false) {
       const processor = new VariablesProcessor(this.jexl, environment.variables);
-      // @ts-ignore
-      await processor.evaluateVariables(request.request, ['url', 'headers', 'method', 'payload']);
+      const exeOptions = {
+        names: ['url', 'headers', 'method', 'payload'],
+        override: {},
+      };
+      if (options.evaluateSystemVariables !== false) {
+        exeOptions.override = environment.systemVariables;
+      }
+      await processor.evaluateVariables(request.request, exeOptions);
     }
 
     const modules = ModulesRegistry.get(ModulesRegistry.request);
@@ -114,6 +121,7 @@ export class RequestFactory {
     const { signal } = abortController;
     await this.actions.processResponseActions(request, executed, response, {
       evaluateVariables: options.evaluateVariables,
+      evaluateSystemVariables: options.evaluateSystemVariables,
     });
     const modules = ModulesRegistry.get(ModulesRegistry.response);
     const environment = await ArcModelEvents.Environment.current(this.eventsTarget);

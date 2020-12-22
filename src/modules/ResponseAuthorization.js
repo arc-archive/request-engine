@@ -2,7 +2,7 @@
 import { HeadersParser } from '@advanced-rest-client/arc-headers';
 import { TransportEvents } from '@advanced-rest-client/arc-events';
 import ExecutionResponse from '../ExecutionResponse.js';
-import { computeUrlPath, updateCache, default as applyCachedBasicAuthData } from './BasicAuthCache.js';
+import applyCachedBasicAuthData, { computeUrlPath, updateCache } from './BasicAuthCache.js';
 
 /** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.ArcEditorRequest} ArcEditorRequest */
 /** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.ArcBaseRequest} ArcBaseRequest */
@@ -39,12 +39,14 @@ function authorizationMethodFromResponse(response) {
 /**
  * @param {ArcBaseRequest} request 
  * @param {ExecutionContext} context 
+ * @param {string} id 
  */
-async function requestBasicAuthData(request, context) {
+async function requestBasicAuthData(request, context, id) {
   await import('@advanced-rest-client/authorization-method/auth-dialog-basic.js');
   const url = computeUrlPath(request.url);
   const authInfo = await context.Store.AuthData.query(context.eventsTarget, url, request.method);
   const element = document.createElement('auth-dialog-basic');
+  element.dataset.owner = id;
   if (authInfo) {
     element.username = authInfo.username;
     element.password = authInfo.password;
@@ -61,6 +63,7 @@ async function requestBasicAuthData(request, context) {
       } else {
         resolve(element.serialize());
       }
+      document.body.removeChild(element);
     })
   });
 }
@@ -68,12 +71,14 @@ async function requestBasicAuthData(request, context) {
 /**
  * @param {ArcBaseRequest} request 
  * @param {ExecutionContext} context 
+ * @param {string} id 
  */
-async function requestNtlmAuthData(request, context) {
+async function requestNtlmAuthData(request, context, id) {
   await import('@advanced-rest-client/authorization-method/auth-dialog-ntlm.js');
   const url = computeUrlPath(request.url);
   const authInfo = await context.Store.AuthData.query(context.eventsTarget, url, request.method);
   const element = document.createElement('auth-dialog-ntlm');
+  element.dataset.owner = id;
   if (authInfo) {
     element.username = authInfo.username;
     element.password = authInfo.password;
@@ -91,6 +96,7 @@ async function requestNtlmAuthData(request, context) {
       } else {
         resolve(element.serialize());
       }
+      document.body.removeChild(element);
     })
   });
 }
@@ -120,6 +126,7 @@ async function storeAuthData(request, context, authResult) {
  * @param {AbortSignal} signal 
  */
 export default async function processAuth(request, executed, response, context, signal) {
+  const { id } = request;
   const typedError = /** @type ErrorResponse */ (response);
   if (typedError.error) {
     return ExecutionResponse.OK;
@@ -133,14 +140,26 @@ export default async function processAuth(request, executed, response, context, 
   }
   let promise;
   if (method === 'basic') {
-    promise = requestBasicAuthData(request.request, context);
+    promise = requestBasicAuthData(request.request, context, id);
   } else {
-    promise = requestNtlmAuthData(request.request, context);
+    promise = requestNtlmAuthData(request.request, context, id);
   }
 
+  // closes any opened dialog.
+  signal.addEventListener('abort', () => {
+    const nodes = document.body.querySelectorAll(`auth-dialog-ntlm[data-owner="${id}"],auth-dialog-basic[data-owner="${id}"]`);
+    Array.from(nodes).forEach((node) => { 
+      // @ts-ignore
+      node.close();
+    });
+  });
+  
   let opResult = ExecutionResponse.OK;
   try {
     const result = await promise;
+    if (signal.aborted) {
+      return opResult;
+    }
     storeAuthData(request.request, context, result);
     if (result) {
       updateCache(method, computeUrlPath(request.request.url), result);

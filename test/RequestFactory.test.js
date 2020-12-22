@@ -1,8 +1,13 @@
+/* eslint-disable no-template-curly-in-string */
 import { assert } from '@open-wc/testing';
+import { DataGenerator } from '@advanced-rest-client/arc-data-generator';
+import { ArcModelEventTypes } from '@advanced-rest-client/arc-models';
 import { RequestFactory } from '../index.js';
 import jexl from '../web_modules/jexl/dist/Jexl.js';
 
 describe('RequestFactory', () => {
+  const generator = new DataGenerator();
+
   describe('constructor()', () => {
     it('sets the eventsTarget property', () => {
       const inst = new RequestFactory(window, jexl);
@@ -135,6 +140,104 @@ describe('RequestFactory', () => {
     it('adds the store info', async () => {
       const result = await inst.buildExecutionContext(['store'], { environment: null, variables: [] });
       assert.typeOf(result.Store, 'object');
+    });
+  });
+
+  describe('processRequest()', () => {
+    function variablesHandler(e) {
+      e.detail.result = Promise.resolve({
+        environment: null,
+        variables: [
+          {
+            name: 'host',
+            value: 'dev.api.com',
+            enabled: true,
+          },
+          {
+            name: 'pathValue',
+            value: '123456789',
+            enabled: true,
+          },
+          {
+            name: 'oauthToken',
+            value: '123token',
+            enabled: true,
+          },
+          {
+            name: 'bodyVariable',
+            value: 'body token',
+            enabled: true,
+          }
+        ],
+        systemVariables: {
+          CWS_CLIENT_ID: 'abcdefghij-abcdefghij508.apps.googleusercontent.com'
+        },
+      });
+    }
+
+    before(() => {
+      // emulates data model for variables
+      window.addEventListener(ArcModelEventTypes.Environment.current, variablesHandler);
+    });
+
+    after(() => {
+      window.removeEventListener(ArcModelEventTypes.Environment.current, variablesHandler);
+    });
+
+    describe('Processing request variables', () => {
+      const id = 'test-id';
+      let inst = /** @type RequestFactory */ (null);
+      let request;
+      beforeEach(() => {
+        inst = new RequestFactory(window, jexl);
+        const obj = generator.generateHistoryObject({
+          forcePayload: true,
+        });
+        obj.url = 'http://${host}/v1/path/${pathValue}';
+        obj.headers += '\nx=Authorization: Bearer ${oauthToken}';
+        obj.payload += '\nvariable=${bodyVariable}';
+
+        request = {
+          id,
+          request: obj,
+        };
+      });
+
+      it('replaces URL variables', async () => {
+        const result = await inst.processRequest(request);
+        assert.equal(result.request.url, 'http://dev.api.com/v1/path/123456789');
+      });
+
+      it('replaces header variables', async () => {
+        const result = await inst.processRequest(request);
+        assert.include(result.request.headers, 'Authorization: Bearer 123token');
+      });
+
+      it('replaces payload variables', async () => {
+        const result = await inst.processRequest(request);
+        assert.include(result.request.payload, 'variable=body token');
+      });
+
+      it('ignores variables processing when disabled', async () => {
+        const result = await inst.processRequest(request, {
+          evaluateVariables: false,
+        });
+        assert.equal(result.request.url, 'http://${host}/v1/path/${pathValue}');
+      });
+
+      it('uses system variables', async () => {
+        request.request.url += '?id=${CWS_CLIENT_ID}';
+        const result = await inst.processRequest(request);
+        assert.equal(result.request.url, 'http://dev.api.com/v1/path/123456789?id=abcdefghij-abcdefghij508.apps.googleusercontent.com');
+      });
+
+      it('ignores system variables processing when disabled', async () => {
+        request.request.url += '?id=${CWS_CLIENT_ID}';
+        const result = await inst.processRequest(request, {
+          evaluateSystemVariables: false,
+        });
+        assert.equal(result.request.url, 'http://dev.api.com/v1/path/123456789?id=undefined');
+      });
     });
   });
 });
