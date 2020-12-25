@@ -51,6 +51,7 @@ async function requestBasicAuthData(request, context, id) {
     element.username = authInfo.username;
     element.password = authInfo.password;
   }
+  element.opened = true;
   document.body.appendChild(element);
   return new Promise((resolve) => {
     element.addEventListener('closed', 
@@ -84,6 +85,7 @@ async function requestNtlmAuthData(request, context, id) {
     element.password = authInfo.password;
     element.domain = authInfo.domain;
   }
+  element.opened = true;
   document.body.appendChild(element);
   return new Promise((resolve) => {
     element.addEventListener('closed', 

@@ -50,6 +50,9 @@ function findCachedAuthData(type, url) {
  * @param {object} value Auth data to set
  */
 export function updateCache(type, url, value) {
+  if (!cache[type]) {
+    cache[type] = {};
+  }
   cache[type][url] = value;
 }
 
