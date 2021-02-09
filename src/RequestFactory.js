@@ -85,7 +85,14 @@ export class RequestFactory {
       if (options.evaluateSystemVariables !== false) {
         exeOptions.override = environment.systemVariables;
       }
-      await processor.evaluateVariables(request.request, exeOptions);
+      try {
+        await processor.evaluateVariables(request.request, exeOptions);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(`Unable to process variables. Continuing without processing.`);
+        // eslint-disable-next-line no-console
+        console.error(e);
+      }
     }
 
     const modules = ModulesRegistry.get(ModulesRegistry.request);
