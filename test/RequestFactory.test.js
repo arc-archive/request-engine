@@ -1,7 +1,7 @@
 /* eslint-disable no-template-curly-in-string */
 import { assert } from '@open-wc/testing';
 import { DataGenerator } from '@advanced-rest-client/arc-data-generator';
-import { ArcModelEventTypes } from '@advanced-rest-client/arc-models';
+import { ArcModelEventTypes } from '@advanced-rest-client/arc-events';
 import { RequestFactory } from '../index.js';
 import jexl from '../web_modules/jexl/dist/Jexl.js';
 

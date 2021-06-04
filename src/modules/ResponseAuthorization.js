@@ -42,7 +42,7 @@ function authorizationMethodFromResponse(response) {
  * @param {string} id 
  */
 async function requestBasicAuthData(request, context, id) {
-  await import('@advanced-rest-client/authorization-method/auth-dialog-basic.js');
+  await import('@advanced-rest-client/authorization/auth-dialog-basic.js');
   const url = computeUrlPath(request.url);
   const authInfo = await context.Store.AuthData.query(context.eventsTarget, url, request.method);
   const element = document.createElement('auth-dialog-basic');
@@ -75,7 +75,7 @@ async function requestBasicAuthData(request, context, id) {
  * @param {string} id 
  */
 async function requestNtlmAuthData(request, context, id) {
-  await import('@advanced-rest-client/authorization-method/auth-dialog-ntlm.js');
+  await import('@advanced-rest-client/authorization/auth-dialog-ntlm.js');
   const url = computeUrlPath(request.url);
   const authInfo = await context.Store.AuthData.query(context.eventsTarget, url, request.method);
   const element = document.createElement('auth-dialog-ntlm');

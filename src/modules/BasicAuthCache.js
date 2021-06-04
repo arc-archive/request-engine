@@ -3,6 +3,7 @@ import { HeadersParser } from '@advanced-rest-client/arc-headers';
 /** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.ArcBaseRequest} ArcBaseRequest */
 /** @typedef {import('@advanced-rest-client/arc-types').FormTypes.FormItem} FormItem */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.NtlmAuthorization} NtlmAuthorization */
+/** @typedef {import('@advanced-rest-client/arc-types').Authorization.BasicAuthorization} BasicAuthorization */
 
 const cache = {};
 
@@ -33,13 +34,14 @@ export function computeUrlPath(url) {
  *
  * @param {string} type Authorization type.
  * @param {string} url The URL of the request.
- * @return {object|undefined} Auth data if exists in the cache.
+ * @return {BasicAuthorization|NtlmAuthorization|undefined} Auth data if exists in the cache.
  */
-function findCachedAuthData(type, url) {
-  if (!cache || !type || !url || !cache[type]) {
+export function findCachedAuthData(type, url) {
+  const key = computeUrlPath(url);
+  if (!cache || !type || !key || !cache[type]) {
     return undefined;
   }
-  return cache[type][url];
+  return cache[type][key];
 }
 
 /**
@@ -47,13 +49,14 @@ function findCachedAuthData(type, url) {
  *
  * @param {string} type Authorization type.
  * @param {string} url The URL of the request.
- * @param {object} value Auth data to set
+ * @param {BasicAuthorization|NtlmAuthorization} value Auth data to set
  */
 export function updateCache(type, url, value) {
+  const key = computeUrlPath(url);
   if (!cache[type]) {
     cache[type] = {};
   }
-  cache[type][url] = value;
+  cache[type][key] = value;
 }
 
 /**
@@ -82,7 +85,7 @@ function applyRequestBasicAuthData(request, data) {
  *
  * @param {ArcBaseRequest} request The event's detail object. Changes made here will be propagated to
  * the event.
- * @param {Object} values The authorization data to apply.
+ * @param {NtlmAuthorization} values The authorization data to apply.
  */
 function applyRequestNtlmAuthData(request, values) {
   if (!Array.isArray(request.authorization)) {
@@ -113,15 +116,14 @@ function applyRequestNtlmAuthData(request, values) {
  */
 export default function applyCachedBasicAuthData(request) {
   // Try to find an auth data for the URL. If has a match, apply it to the request
-  const url = computeUrlPath(request.url);
-  let authData = findCachedAuthData('basic', url);
+  let authData = findCachedAuthData('basic', request.url);
   if (authData) {
     applyRequestBasicAuthData(request, authData);
     return;
   }
   // Try NTLM
-  authData = findCachedAuthData('ntlm', url);
+  authData = findCachedAuthData('ntlm', request.url);
   if (authData) {
-    applyRequestNtlmAuthData(request, authData);
+    applyRequestNtlmAuthData(request, /** @type NtlmAuthorization */ (authData));
   }
 }

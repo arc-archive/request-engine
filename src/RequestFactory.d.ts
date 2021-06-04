@@ -1,7 +1,7 @@
 import { ActionsRunner } from '@advanced-rest-client/arc-actions';
 import { ArcEditorRequest, TransportRequest } from '@advanced-rest-client/arc-types/src/request/ArcRequest';
 import { ErrorResponse } from '@advanced-rest-client/arc-types/src/request/ArcResponse';
-import { EnvironmentStateDetail } from '@advanced-rest-client/arc-models';
+import { EnvironmentStateDetail } from '@advanced-rest-client/arc-events';
 import { RegisteredResponseModule, ExecutionContext, ExecutionEvents, ExecutionStore, RequestProcessOptions, ResponseProcessOptions } from './types';
 
 /**

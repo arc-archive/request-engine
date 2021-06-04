@@ -129,7 +129,6 @@ In ARC register its own default modules:
   - `src/modules/RequestAuthorization.js` - Inserts authorization data into the request from the authorization configuration. Requires `['store']` permission.
   - `src/modules/ResponseAuthorization.js` - Handles the response that needs authorization. Renders a dialog for the basics or NTLM authorization methods when needed and re-runs the request. Requires `['store', 'events]` permission.
 
-
 ```javascript
 import { RequestFactory, ModulesRegistry, RequestAuthorization, ResponseAuthorization, RequestCookies } from '@advanced-rest-client/request-engine';
 

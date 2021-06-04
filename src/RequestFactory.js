@@ -1,6 +1,5 @@
 /* eslint-disable class-methods-use-this */
 import { ActionsRunner } from '@advanced-rest-client/arc-actions';
-import { ArcModelEvents } from '@advanced-rest-client/arc-models';
 import * as Events from '@advanced-rest-client/arc-events';
 import { VariablesProcessor } from '@advanced-rest-client/arc-environment';
 import { ModulesRegistry } from './ModulesRegistry.js';
@@ -10,7 +9,7 @@ import ExecutionResponse from './ExecutionResponse.js';
 /** @typedef {import('@advanced-rest-client/arc-types').ArcResponse.Response} Response */
 /** @typedef {import('@advanced-rest-client/arc-types').ArcResponse.ErrorResponse} ErrorResponse */
 /** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.TransportRequest} TransportRequest */
-/** @typedef {import('@advanced-rest-client/arc-models').EnvironmentStateDetail} EnvironmentStateDetail */
+/** @typedef {import('@advanced-rest-client/arc-events').EnvironmentStateDetail} EnvironmentStateDetail */
 /** @typedef {import('./types').RegisteredRequestModule} RegisteredRequestModule */
 /** @typedef {import('./types').RegisteredResponseModule} RegisteredResponseModule */
 /** @typedef {import('./types').ExecutionContext} ExecutionContext */
@@ -75,7 +74,7 @@ export class RequestFactory {
       evaluateSystemVariables: options.evaluateSystemVariables,
     });
 
-    const environment = await ArcModelEvents.Environment.current(this.eventsTarget);
+    const environment = await Events.ArcModelEvents.Environment.current(this.eventsTarget);
     if (options.evaluateVariables !== false) {
       const processor = new VariablesProcessor(this.jexl, environment.variables);
       const exeOptions = {
@@ -131,7 +130,7 @@ export class RequestFactory {
       evaluateSystemVariables: options.evaluateSystemVariables,
     });
     const modules = ModulesRegistry.get(ModulesRegistry.response);
-    const environment = await ArcModelEvents.Environment.current(this.eventsTarget);
+    const environment = await Events.ArcModelEvents.Environment.current(this.eventsTarget);
     for (const [id, main] of modules) {
       if (signal.aborted) {
         this.abortControllers.delete(request.id);
@@ -242,19 +241,19 @@ export class RequestFactory {
    */
   prepareExecutionStore(hasEnvironment) {
     const result = /** @type ExecutionStore */ ({
-      AuthData: ArcModelEvents.AuthData,
-      ClientCertificate: ArcModelEvents.ClientCertificate,
-      HostRules: ArcModelEvents.HostRules,
-      Project: ArcModelEvents.Project,
-      Request: ArcModelEvents.Request,
-      RestApi: ArcModelEvents.RestApi,
-      UrlHistory: ArcModelEvents.UrlHistory,
-      UrlIndexer: ArcModelEvents.UrlIndexer,
-      WSUrlHistory: ArcModelEvents.WSUrlHistory,
+      AuthData: Events.ArcModelEvents.AuthData,
+      ClientCertificate: Events.ArcModelEvents.ClientCertificate,
+      HostRules: Events.ArcModelEvents.HostRules,
+      Project: Events.ArcModelEvents.Project,
+      Request: Events.ArcModelEvents.Request,
+      RestApi: Events.ArcModelEvents.RestApi,
+      UrlHistory: Events.ArcModelEvents.UrlHistory,
+      UrlIndexer: Events.ArcModelEvents.UrlIndexer,
+      WSUrlHistory: Events.ArcModelEvents.WSUrlHistory,
     });
     if (hasEnvironment) {
-      result.Environment = ArcModelEvents.Environment;
-      result.Variable = ArcModelEvents.Variable;
+      result.Environment = Events.ArcModelEvents.Environment;
+      result.Variable = Events.ArcModelEvents.Variable;
     }
     return Object.freeze(result);
   }
