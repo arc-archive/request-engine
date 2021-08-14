@@ -128,9 +128,9 @@ export async function processRequestCookies(request, context, signal) {
  * Processes cookies data from the response and inserts them into the session storage
  * 
  * @param {ArcEditorRequest} request 
- * @param {ExecutionContext} context 
  * @param {TransportRequest} executed The request reported by the transport library
  * @param {Response|ErrorResponse} response ARC response object.
+ * @param {ExecutionContext} context 
  */
 export async function processResponseCookies(request, executed, response, context) {
   const typedError = /** @type ErrorResponse */ (response);

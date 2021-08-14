@@ -1,8 +1,8 @@
 /* eslint-disable no-template-curly-in-string */
 import { assert } from '@open-wc/testing';
 import { ArcMock } from '@advanced-rest-client/arc-data-generator';
-import { ArcModelEventTypes } from '@advanced-rest-client/arc-events';
-import { RequestFactory, RequestAuthorization, ModulesRegistry } from '../index.js';
+import { ArcModelEventTypes, SessionCookieEventTypes } from '@advanced-rest-client/arc-events';
+import { RequestFactory, RequestAuthorization, ModulesRegistry, RequestCookies } from '../index.js';
 import jexl from '../web_modules/jexl/dist/Jexl.js';
 
 /** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.ArcBaseRequest} ArcBaseRequest */
@@ -10,6 +10,7 @@ import jexl from '../web_modules/jexl/dist/Jexl.js';
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.BasicAuthorization} BasicAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.OAuth2Authorization} OAuth2Authorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.CCAuthorization} CCAuthorization */
+/** @typedef {import('@advanced-rest-client/arc-types').Cookies.ARCCookie} ARCCookie */
 
 describe('RequestFactory', () => {
   const generator = new ArcMock();
@@ -258,7 +259,6 @@ describe('RequestFactory', () => {
       });
     });
 
-
     describe('Processing request authorization variables', () => {
       const id = 'test-id';
       /** @type RequestFactory */
@@ -281,6 +281,10 @@ describe('RequestFactory', () => {
 
       before(() => {
         ModulesRegistry.register(ModulesRegistry.request, 'request/request-authorization', RequestAuthorization, ['store']);
+      });
+
+      after(() => {
+        ModulesRegistry.unregister(ModulesRegistry.request, 'request/request-authorization');
       });
 
       it('processes basic authorization', async () => {
@@ -568,6 +572,72 @@ describe('RequestFactory', () => {
         const result = await inst.processRequest(request);
         const { clientCertificate } = result.request;
         assert.isUndefined(clientCertificate);
+      });
+    });
+
+    describe('processing request cookies', () => {
+      /** @type ARCCookie[] */
+      let cookies;
+      /**
+       * @param {CustomEvent} e
+       */
+      const handler = (e) => {
+        cookies = generator.cookies.cookies(2);
+        e.detail.result = Promise.resolve(cookies)
+      };
+
+      before(() => {
+        ModulesRegistry.register(ModulesRegistry.request, 'arc/request/cookies', RequestCookies.processRequestCookies, ['events']);
+      });
+
+      after(() => {
+        ModulesRegistry.unregister(ModulesRegistry.request, 'arc/request/cookies');
+      });
+
+      const id = 'test-id';
+      /** @type RequestFactory */
+      let inst;
+      /** @type ArcEditorRequest */
+      let request;
+      beforeEach(() => {
+        inst = new RequestFactory(window, jexl);
+        const obj = generator.http.history({
+          headers: {
+            pool: ['accept', 'cache-control', 'date', 'if-match', 'if-none-match', 'accept-charset'],
+          },
+          payload: {
+            noPayload: true,
+          },
+        });
+        obj.headers = '';
+        request = {
+          id,
+          request: obj,
+        };
+      });
+
+      afterEach(() => {
+        window.removeEventListener(SessionCookieEventTypes.listUrl, handler);
+      });
+
+      it('adds cookies to the request', async () => {
+        window.addEventListener(SessionCookieEventTypes.listUrl, handler);
+        const result = await inst.processRequest(request);
+        const str = cookies.map(i => `${i.name}=${i.value}`).join('; ');
+        assert.include(result.request.headers, `cookie: ${str}`);
+        assert.notInclude(request.request.headers, `cookie:`);
+      });
+
+      it('ignores cookies when disabled in the config', async () => {
+        window.addEventListener(SessionCookieEventTypes.listUrl, handler);
+        request.request.config = {
+          ignoreSessionCookies: true,
+          enabled: true,
+        };
+        const result = await inst.processRequest(request);
+        const str = cookies.map(i => `${i.name}=${i.value}`).join('; ');
+        assert.notInclude(result.request.headers, `cookie:`);
+        assert.notInclude(request.request.headers, `cookie:`);
       });
     });
   });
