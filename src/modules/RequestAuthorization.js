@@ -24,10 +24,14 @@ async function processClientCertificate(request, config, context) {
     return;
   }
   const result = await context.Store.ClientCertificate.read(context.eventsTarget, id);
+  if (!result) {
+    return;
+  }
+
+  const cert = Array.isArray(result.cert) ? result.cert : [result.cert];
   request.clientCertificate = {
     type: result.type,
-    // @ts-ignore
-    cert: [result.cert],
+    cert,
   };
   if (result.key) {
     // @ts-ignore
@@ -61,16 +65,21 @@ function processOAuth2(request, config) {
   if (!accessToken) {
     return;
   }
-  if (deliveryMethod !== 'header') {
-    // TODO (pawel): add support for query parameters delivery method.
-    // Because the authorization panel does not support it right now it is
-    // not implemented, yet.
-    return;
-  }
-  let headers = HeadersParser.toJSON(request.headers || '');
   const value = `${tokenType} ${accessToken}`;
-  headers = /** @type FormItem[] */ (HeadersParser.replace(headers, deliveryName, value));
-  request.headers = HeadersParser.toString(headers);
+  if (deliveryMethod === 'header') {
+    let headers = HeadersParser.toJSON(request.headers || '');
+    headers = /** @type FormItem[] */ (HeadersParser.replace(headers, deliveryName, value));
+    request.headers = HeadersParser.toString(headers);
+  } else if (deliveryMethod === 'query') {
+    const { url } = request;
+    try {
+      const parsed = new URL(url);
+      parsed.searchParams.append(deliveryName, value);
+      request.url = parsed.toString();
+    } catch (e) {
+      // ...
+    }
+  }
 }
 
 /**

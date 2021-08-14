@@ -96,7 +96,8 @@ function applyRequestNtlmAuthData(request, values) {
     ntlm = {
       enabled: true,
       type: 'ntlm',
-      config: {}
+      config: {},
+      valid: true,
     };
     request.authorization.push(ntlm);
   }

@@ -1,12 +1,18 @@
 /* eslint-disable no-template-curly-in-string */
 import { assert } from '@open-wc/testing';
-import { DataGenerator } from '@advanced-rest-client/arc-data-generator';
+import { ArcMock } from '@advanced-rest-client/arc-data-generator';
 import { ArcModelEventTypes } from '@advanced-rest-client/arc-events';
-import { RequestFactory } from '../index.js';
+import { RequestFactory, RequestAuthorization, ModulesRegistry } from '../index.js';
 import jexl from '../web_modules/jexl/dist/Jexl.js';
 
+/** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.ArcBaseRequest} ArcBaseRequest */
+/** @typedef {import('@advanced-rest-client/arc-types').ArcRequest.ArcEditorRequest} ArcEditorRequest */
+/** @typedef {import('@advanced-rest-client/arc-types').Authorization.BasicAuthorization} BasicAuthorization */
+/** @typedef {import('@advanced-rest-client/arc-types').Authorization.OAuth2Authorization} OAuth2Authorization */
+/** @typedef {import('@advanced-rest-client/arc-types').Authorization.CCAuthorization} CCAuthorization */
+
 describe('RequestFactory', () => {
-  const generator = new DataGenerator();
+  const generator = new ArcMock();
 
   describe('constructor()', () => {
     it('sets the eventsTarget property', () => {
@@ -167,7 +173,17 @@ describe('RequestFactory', () => {
             name: 'bodyVariable',
             value: 'body token',
             enabled: true,
-          }
+          },
+          {
+            name: 'secretUsername',
+            value: 'sName',
+            enabled: true,
+          },
+          {
+            name: 'secretPassword',
+            value: 'sPwd',
+            enabled: true,
+          },
         ],
         systemVariables: {
           CWS_CLIENT_ID: 'abcdefghij-abcdefghij508.apps.googleusercontent.com'
@@ -190,8 +206,10 @@ describe('RequestFactory', () => {
       let request;
       beforeEach(() => {
         inst = new RequestFactory(window, jexl);
-        const obj = generator.generateHistoryObject({
-          forcePayload: true,
+        const obj = generator.http.history({
+          payload: {
+            force: true,
+          },
         });
         obj.url = 'http://${host}/v1/path/${pathValue}';
         obj.headers += '\nx=Authorization: Bearer ${oauthToken}';
@@ -237,6 +255,319 @@ describe('RequestFactory', () => {
           evaluateSystemVariables: false,
         });
         assert.equal(result.request.url, 'http://dev.api.com/v1/path/123456789?id=undefined');
+      });
+    });
+
+
+    describe('Processing request authorization variables', () => {
+      const id = 'test-id';
+      /** @type RequestFactory */
+      let inst;
+      /** @type ArcEditorRequest */
+      let request;
+      beforeEach(() => {
+        inst = new RequestFactory(window, jexl);
+        const obj = generator.http.history({
+          payload: {
+            noPayload: true,
+          },
+        });
+        obj.authorization = [];
+        request = {
+          id,
+          request: obj,
+        };
+      });
+
+      before(() => {
+        ModulesRegistry.register(ModulesRegistry.request, 'request/request-authorization', RequestAuthorization, ['store']);
+      });
+
+      it('processes basic authorization', async () => {
+        request.request.headers = '';
+        const config = /** @type BasicAuthorization */ ({
+          username: '{secretUsername}',
+          password: '{secretPassword}',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'basic',
+        });
+        const result = await inst.processRequest(request);
+        const [auth] = result.request.authorization;
+        const processed = /** @type BasicAuthorization */ (auth.config);
+        assert.equal(processed.username, 'sName', 'username is processed');
+        assert.equal(processed.password, 'sPwd', 'password is processed');
+        assert.include(result.request.headers, 'authorization: Basic c05hbWU6c1B3ZA==', 'has processed authorization value');
+        assert.equal(config.username, '{secretUsername}', 'original auth config did not change');
+        assert.notInclude(request.request.headers, 'authorization: Basic', 'original request did not change');
+        // atob() => sName:sPwd
+      });
+
+      it('ignores basic auth when username is not defined', async () => {
+        const config = /** @type BasicAuthorization */ ({
+          username: undefined,
+          password: '{secretPassword}',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'basic',
+        });
+        const result = await inst.processRequest(request);
+        assert.notInclude(result.request.headers, 'authorization: Basic', 'processed has no authorization value');
+        assert.notInclude(request.request.headers, 'authorization: Basic', 'original has no authorization value');
+      });
+
+      it('processes OAuth2 with default delivery', async () => {
+        request.request.headers = '';
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: 'abc123',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.headers, 'authorization: Bearer abc123', 'has processed authorization value');
+        assert.notInclude(request.request.headers, 'authorization: Bearer', 'original did not change');
+      });
+
+      it('processes OAuth2 with tokenType (header)', async () => {
+        request.request.headers = '';
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: 'abc123',
+          tokenType: 'Custom',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.headers, 'authorization: Custom abc123', 'has processed authorization value');
+        assert.notInclude(request.request.headers, 'authorization: Custom', 'original did not change');
+      });
+
+      it('processes OAuth2 with deliveryName (header)', async () => {
+        request.request.headers = '';
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: 'abc123',
+          deliveryName: 'x-auth',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.headers, 'x-auth: Bearer abc123', 'has processed authorization value');
+        assert.notInclude(request.request.headers, 'x-auth: Bearer', 'original did not change');
+      });
+
+      it('processes OAuth2 with query delivery', async () => {
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: 'abc123',
+          deliveryMethod: 'query',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.url, 'authorization=Bearer+abc123', 'has processed authorization value');
+        assert.notInclude(request.request.url, 'authorization', 'original did not change');
+      });
+
+      it('processes OAuth2 with tokenType (query)', async () => {
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: 'abc123',
+          tokenType: 'Custom',
+          deliveryMethod: 'query',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.url, 'authorization=Custom+abc123', 'has processed authorization value');
+        assert.notInclude(request.request.url, 'authorization', 'original did not change');
+      });
+
+      it('processes OAuth2 with deliveryName (query)', async () => {
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: 'abc123',
+          deliveryName: 'x-auth',
+          deliveryMethod: 'query',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.url, 'x-auth=Bearer+abc123', 'has processed authorization value');
+        assert.notInclude(request.request.url, 'x-auth', 'original did not change');
+      });
+
+      it('ignores OAuth2 when no accessToken', async () => {
+        request.request.headers = '';
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: undefined,
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.notInclude(result.request.headers, 'authorization', 'processed did not change');
+        assert.notInclude(request.request.headers, 'authorization', 'original did not change');
+      });
+
+      it('ignores OAuth2 when not enabled', async () => {
+        request.request.headers = '';
+        const config = /** @type OAuth2Authorization */ ({
+          accessToken: 'test',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: false,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.notInclude(result.request.headers, 'authorization', 'processed did not change');
+        assert.notInclude(request.request.headers, 'authorization', 'original did not change');
+      });
+
+      it('ignores OAuth2 when no config', async () => {
+        request.request.headers = '';
+        request.request.authorization.push({
+          config: undefined,
+          valid: true,
+          enabled: false,
+          type: 'oauth 2',
+        });
+        const result = await inst.processRequest(request);
+        assert.notInclude(result.request.headers, 'authorization', 'processed did not change');
+        assert.notInclude(request.request.headers, 'authorization', 'original did not change');
+      });
+
+      it('ignores when no authorization', async () => {
+        request.request.headers = '';
+        const result = await inst.processRequest(request);
+        assert.notInclude(result.request.headers, 'authorization', 'processed did not change');
+        assert.notInclude(request.request.headers, 'authorization', 'original did not change');
+      });
+
+      it('processes client certificate authorization', async () => {
+        request.request.clientCertificate = undefined;
+        const cc = generator.certificates.requestCertificate({ noKey: true });
+        /**
+         * @param {CustomEvent} e
+         */
+        const hander = (e) => { e.detail.result = Promise.resolve(cc) };
+        window.addEventListener(ArcModelEventTypes.ClientCertificate.read, hander);
+        request.request.headers = '';
+        const config = /** @type CCAuthorization */ ({
+          id: '123'
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'client certificate',
+        });
+        const result = await inst.processRequest(request);
+        window.removeEventListener(ArcModelEventTypes.ClientCertificate.read, hander);
+        const [auth] = result.request.authorization;
+        const processed = /** @type CCAuthorization */ (auth.config);
+        assert.deepEqual(processed, { id: '123' }, 'original auth did not change');
+        assert.isUndefined(request.request.clientCertificate, 'original request did not change');
+        const { clientCertificate } = result.request;
+        assert.typeOf(clientCertificate, 'object', 'processed request has the certificate');
+        assert.equal(clientCertificate.type, cc.type, 'certificate has the type');
+        const cert = Array.isArray(cc.cert) ? cc.cert : [cc.cert];
+        assert.deepEqual(clientCertificate.cert, cert, 'certificate has the certificate data');
+        assert.isUndefined(clientCertificate.key, 'certificate has no key');
+      });
+
+      it('adds the key to the client certificate authorization', async () => {
+        request.request.clientCertificate = undefined;
+        const cc = generator.certificates.requestCertificate();
+        /**
+         * @param {CustomEvent} e
+         */
+        const hander = (e) => { e.detail.result = Promise.resolve(cc) };
+        window.addEventListener(ArcModelEventTypes.ClientCertificate.read, hander);
+        request.request.headers = '';
+        const config = /** @type CCAuthorization */ ({
+          id: '123'
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'client certificate',
+        });
+        const result = await inst.processRequest(request);
+        window.removeEventListener(ArcModelEventTypes.ClientCertificate.read, hander);
+        const { clientCertificate } = result.request;
+        const key = Array.isArray(cc.key) ? cc.key : [cc.key];
+        assert.deepEqual(clientCertificate.key, key, 'certificate has the key data');
+      });
+
+      it('ignores certificate authorization when no id', async () => {
+        request.request.clientCertificate = undefined;
+        const cc = generator.certificates.requestCertificate();
+        /**
+         * @param {CustomEvent} e
+         */
+        const hander = (e) => { e.detail.result = Promise.resolve(cc) };
+        window.addEventListener(ArcModelEventTypes.ClientCertificate.read, hander);
+        const config = /** @type CCAuthorization */ ({
+          id: undefined,
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'client certificate',
+        });
+        const result = await inst.processRequest(request);
+        window.removeEventListener(ArcModelEventTypes.ClientCertificate.read, hander);
+        const { clientCertificate } = result.request;
+        assert.isUndefined(clientCertificate);
+      });
+
+      it('ignores certificate authorization when model not accessible', async () => {
+        request.request.clientCertificate = undefined;
+        const config = /** @type CCAuthorization */ ({
+          id: 'abc',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'client certificate',
+        });
+        const result = await inst.processRequest(request);
+        const { clientCertificate } = result.request;
+        assert.isUndefined(clientCertificate);
       });
     });
   });
