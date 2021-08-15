@@ -1,6 +1,6 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-await-in-loop */
-import { HeadersParser } from '@advanced-rest-client/arc-headers';
+import { ArcHeaders } from '@advanced-rest-client/arc-headers';
 import ExecutionResponse from '../ExecutionResponse.js';
 import applyCachedBasicAuthData from './BasicAuthCache.js';
 
@@ -9,6 +9,7 @@ import applyCachedBasicAuthData from './BasicAuthCache.js';
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.CCAuthorization} CCAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.BasicAuthorization} BasicAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.OAuth2Authorization} OAuth2Authorization */
+/** @typedef {import('@advanced-rest-client/arc-types').Authorization.BearerAuthorization} BearerAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').FormTypes.FormItem} FormItem */
 /** @typedef {import('../types').ExecutionContext} ExecutionContext */
 
@@ -49,10 +50,11 @@ function processBasicAuth(request, config) {
   if (!username) {
     return;
   }
-  let headers = HeadersParser.toJSON(request.headers || '');
   const value = btoa(`${username}:${password || ''}`);
-  headers = /** @type FormItem[] */ (HeadersParser.replace(headers, 'authorization', `Basic ${value}`));
-  request.headers = HeadersParser.toString(headers);
+
+  const headers = new ArcHeaders(request.headers || '');
+  headers.append('authorization', `Basic ${value}`);
+  request.headers = headers.toString();
 }
 
 /**
@@ -67,9 +69,9 @@ function processOAuth2(request, config) {
   }
   const value = `${tokenType} ${accessToken}`;
   if (deliveryMethod === 'header') {
-    let headers = HeadersParser.toJSON(request.headers || '');
-    headers = /** @type FormItem[] */ (HeadersParser.replace(headers, deliveryName, value));
-    request.headers = HeadersParser.toString(headers);
+    const headers = new ArcHeaders(request.headers || '');
+    headers.append(deliveryName, value);
+    request.headers = headers.toString();
   } else if (deliveryMethod === 'query') {
     const { url } = request;
     try {
@@ -80,6 +82,20 @@ function processOAuth2(request, config) {
       // ...
     }
   }
+}
+
+/**
+ * Injects bearer auth header into the request headers.
+ * @param {ArcBaseRequest} request 
+ * @param {BearerAuthorization} config 
+ */
+function processBearer(request, config) {
+  const { token } = config;
+  const value = `Bearer ${token}`;
+
+  const headers = new ArcHeaders(request.headers || '');
+  headers.append('authorization', value);
+  request.headers = headers.toString();
 }
 
 /**
@@ -104,6 +120,7 @@ export default async function processAuth(request, context, signal) {
       case 'client certificate': await processClientCertificate(request.request, /** @type CCAuthorization */ (auth.config), context); break;
       case 'basic': processBasicAuth(request.request, /** @type BasicAuthorization */ (auth.config)); break;
       case 'oauth 2': processOAuth2(request.request, /** @type OAuth2Authorization */ (auth.config)); break;
+      case 'bearer': processBearer(request.request, /** @type BearerAuthorization */ (auth.config)); break;
       default:
     }
   }

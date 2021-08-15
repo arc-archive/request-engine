@@ -10,6 +10,7 @@ import jexl from '../web_modules/jexl/dist/Jexl.js';
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.BasicAuthorization} BasicAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.OAuth2Authorization} OAuth2Authorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.CCAuthorization} CCAuthorization */
+/** @typedef {import('@advanced-rest-client/arc-types').Authorization.BearerAuthorization} BearerAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Cookies.ARCCookie} ARCCookie */
 
 describe('RequestFactory', () => {
@@ -572,6 +573,38 @@ describe('RequestFactory', () => {
         const result = await inst.processRequest(request);
         const { clientCertificate } = result.request;
         assert.isUndefined(clientCertificate);
+      });
+
+      it('processes Bearer authorization', async () => {
+        request.request.headers = '';
+        const config = /** @type BearerAuthorization */ ({
+          token: 'abc123',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'bearer',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.headers, 'authorization: Bearer abc123', 'has processed authorization value');
+        assert.notInclude(request.request.headers, 'authorization: Bearer', 'original did not change');
+      });
+
+      it('appends Bearer token to the existing authorization', async () => {
+        request.request.headers = 'authorization: Basic 1234';
+        const config = /** @type BearerAuthorization */ ({
+          token: 'abc123',
+        });
+        request.request.authorization.push({
+          config,
+          valid: true,
+          enabled: true,
+          type: 'bearer',
+        });
+        const result = await inst.processRequest(request);
+        assert.include(result.request.headers, 'authorization: Basic 1234,Bearer abc123', 'has processed authorization value');
+        assert.notInclude(request.request.headers, 'Bearer', 'original did not change');
       });
     });
 

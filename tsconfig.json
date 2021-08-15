@@ -20,7 +20,7 @@
   "include": [
     "**/*.js",
     "node_modules/@open-wc/**/*.js", "src/RequestMetaDetailsElement.d.ts", "src/RequestMetaEditorElement.d.ts", "index.d.ts", "arc-request-editor.d.ts", "arc-request-config.d.ts", "src/ModulesRegistry.d.ts", "src/RequestFactory.d.ts"
-  ],
+, "src/modules/RequestAuthorization.d.ts"  ],
   "exclude": [
     "node_modules/!(@open-wc)"
   ]
