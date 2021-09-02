@@ -10,6 +10,7 @@ import applyCachedBasicAuthData from './BasicAuthCache.js';
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.BasicAuthorization} BasicAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.OAuth2Authorization} OAuth2Authorization */
 /** @typedef {import('@advanced-rest-client/arc-types').Authorization.BearerAuthorization} BearerAuthorization */
+/** @typedef {import('@advanced-rest-client/arc-types').Authorization.OidcAuthorization} OidcAuthorization */
 /** @typedef {import('@advanced-rest-client/arc-types').FormTypes.FormItem} FormItem */
 /** @typedef {import('../types').ExecutionContext} ExecutionContext */
 
@@ -85,6 +86,20 @@ function processOAuth2(request, config) {
 }
 
 /**
+ * Injects OpenID Connect auth header into the request headers.
+ * @param {ArcBaseRequest} request 
+ * @param {OidcAuthorization} config 
+ */
+function processOpenId(request, config) {
+  const { accessToken } = config;
+  if (accessToken) {
+    processOAuth2(request, config);
+  }
+  // todo - if AT is missing find the current token from the tokens list in the passed configuration.
+  // Currently the authorization method UI sets the token when the requests is generated so it's not as much important.
+}
+
+/**
  * Injects bearer auth header into the request headers.
  * @param {ArcBaseRequest} request 
  * @param {BearerAuthorization} config 
@@ -120,6 +135,7 @@ export default async function processAuth(request, context, signal) {
       case 'client certificate': await processClientCertificate(request.request, /** @type CCAuthorization */ (auth.config), context); break;
       case 'basic': processBasicAuth(request.request, /** @type BasicAuthorization */ (auth.config)); break;
       case 'oauth 2': processOAuth2(request.request, /** @type OAuth2Authorization */ (auth.config)); break;
+      case 'open id': processOpenId(request.request, /** @type OidcAuthorization */ (auth.config)); break;
       case 'bearer': processBearer(request.request, /** @type BearerAuthorization */ (auth.config)); break;
       default:
     }
