@@ -9,6 +9,7 @@ import { RegisteredResponseModule, ExecutionContext, ExecutionEvents, ExecutionS
  * 
  * Pre processing part evaluates variables on the request object and then executes request plugins.
  * Post processing 
+ * @deprecated Use `@advanced-rest-client/app` instead.
  */
 export declare class RequestFactory {
   eventsTarget: EventTarget;

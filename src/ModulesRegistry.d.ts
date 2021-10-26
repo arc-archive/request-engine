@@ -2,6 +2,7 @@ import { RegisteredResponseModule, RegisteredRequestModule } from './types';
 
 /**
  * A registry for modules.
+ * @deprecated Use `@advanced-rest-client/app` instead.
  */
 export declare class ModulesRegistry {
   static get request(): string;

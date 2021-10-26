@@ -1,4 +1,8 @@
-# ARC engine
+# Deprecated
+
+This component is deprecated. Use `@advanced-rest-client/app` instead.
+
+----
 
 The engine for processing ARC requests.
 
